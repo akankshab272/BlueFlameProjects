@@ -1,0 +1,310 @@
+global with sharing class ProductDefaultScheduling 
+{
+	Schema.DescribeSObjectResult describeSObjectResult = Product2.SObjectType.getDescribe();
+    	boolean resultrev = describeSObjectResult.fields.getMap().containsKey('CanUseRevenueSchedule');
+
+        if(resultrev == true)
+        {
+          ProductDefaultScheduling.RevenueScheduleCheck(prodlist);
+        }
+
+    	Schema.DescribeSObjectResult describeSObjectResult1 = Product2.SObjectType.getDescribe();
+    	boolean resultquant =  describeSObjectResult.fields.getMap().containsKey('CanUseQuantitySchedule');
+        
+        if(resultquant == true)
+        {
+          ProductDefaultScheduling.QuantityScheduleCheck(prodlist);
+        }
+    
+// Method for adding schedule to opportunity line item if Revenue Scheduling is enabled 
+    public static void RevenueScheduleCheck(List<Product2> productlist)
+    { 
+//Add items to List where opportunity line item ID is equal to Product ID
+        List<OpportunityLineItem> opplineitem= [SELECT ID,Product2Id,TotalPrice,Quantity FROM OpportunityLineItem WHERE Product2Id =:productlist];
+        System.debug('Opportunity Line Item :' + opplineitem);
+        
+        List<OpportunityLineItemSchedule> opplineitemsch = new List<OpportunityLineItemSchedule>();
+ 
+        for(Product2 product : productlist)
+        {
+            for(OpportunityLineItem oppitem : opplineitem)
+            {
+                if((product.Id == oppitem.Product2Id))
+                {                 
+ //Check If Revenue Scheduling is enabled on the product. 
+                    if(product.CanUseRevenueSchedule == true)
+                    {
+                        string revenuescheduletype = string.valueOf(product.RevenueScheduleType);
+                        system.debug('RevenueScheduleType :' + revenuescheduletype);
+                        
+                        string revenueinstallperiod = string.valueOf(product.RevenueInstallmentPeriod);
+                        system.debug('RevenueInstallmentPeriod : ' + revenueinstallperiod);
+                        
+                        integer noofrevenueinstall = product.NumberOfRevenueInstallments;
+                        system.debug('NumberOfRevenueInstallments : ' + noofrevenueinstall);
+                        
+                        date scheduleddate = System.today();
+                        
+                        for(integer i=0 ; i<noofrevenueinstall ; i++)
+                        {
+                           OpportunityLineItemSchedule sch = new OpportunityLineItemSchedule();
+                            
+ /** If Revenue Schedule Type IS DIVIDE INSTALLMENTS **/ 
+                         
+                          if(RevenueScheduleType == 'Divide')
+                           {
+                               if(revenueinstallperiod == 'Daily')
+                               {
+                                   sch.Type = 'Revenue';
+                                   sch.Revenue = (oppitem.TotalPrice)/noofrevenueinstall;
+                                   sch.ScheduleDate = scheduleddate + i;
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               }
+                               
+                               if(revenueinstallperiod == 'Weekly')
+                               {
+                                   sch.Type = 'Revenue';
+                                   sch.Revenue = (oppitem.TotalPrice)/noofrevenueinstall;
+                                   sch.ScheduleDate = scheduleddate.addDays(i * 7) ;
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               }
+                               
+                               if(revenueinstallperiod == 'Monthly')
+                               {
+                                   scheduleddate = scheduleddate.addMonths(i * 1);
+                                   sch.Type = 'Revenue';
+                                   sch.Revenue = (oppitem.TotalPrice)/noofrevenueinstall;
+                                   sch.ScheduleDate = scheduleddate;
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               }
+                               
+                               if(revenueinstallperiod == 'Quaterly')
+                               {
+                                   sch.Type = 'Revenue';
+                                   sch.Revenue = (oppitem.TotalPrice)/noofrevenueinstall;
+                                   sch.ScheduleDate = scheduleddate.addMonths(i * 4);
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               }
+                               
+                               if(revenueinstallperiod == 'Yearly')
+                               {
+                                   sch.Type = 'Revenue';
+                                   sch.Revenue = (oppitem.TotalPrice)/noofrevenueinstall;
+                                   sch.ScheduleDate = scheduleddate.addYears(i * 1);
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               }
+                           } // End of IF(RevenueScheduleType = 'DIVIDE')
+                            
+/** If Revenue Schedule Type IS REPEAT INSTALLMENTS **/                              
+                          
+                         else if(RevenueScheduleType == 'Repeat')
+                           {
+                               if(revenueinstallperiod == 'Daily')
+                               {
+                                   sch.Type = 'Revenue';
+                                   sch.Revenue = oppitem.TotalPrice;
+                                   sch.ScheduleDate = scheduleddate + i;
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               }
+                               
+                               if(revenueinstallperiod == 'Weekly')
+                               {
+                                   sch.Type = 'Revenue';
+                                   sch.Revenue = oppitem.TotalPrice;
+                                   sch.ScheduleDate = scheduleddate.addDays(i * 7 ) ;
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               }
+                               
+                               if(revenueinstallperiod == 'Monthly')
+                               {
+                                   sch.Type = 'Revenue';
+                                   sch.Revenue = oppitem.TotalPrice;
+                                   sch.ScheduleDate = scheduleddate.addMonths(i * 1);
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               }
+                               
+                               if(revenueinstallperiod == 'Quaterly')
+                               {
+                                   sch.Type = 'Revenue';
+                                   sch.Revenue = oppitem.TotalPrice;
+                                   sch.ScheduleDate = scheduleddate.addMonths(i * 4);
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               }
+                               
+                               if(revenueinstallperiod == 'Yearly')
+                               {
+                                   sch.Type = 'Revenue';
+                                   sch.Revenue = oppitem.TotalPrice;
+                                   sch.ScheduleDate = scheduleddate.addYears(i * 1);
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               } 
+                           }  // End of IF(RevenueScheduleType = 'REPEAT') 
+                        } // END of FOR
+                    } // END OF IF(SCHEDULE VERIFICATION)
+           		} //END OF IF(product.Id == oppitem.Product2Id)
+            } //END OF FOR (opplineitem)
+        } //END OF FOR (productlist)
+        
+       insert opplineitemsch;
+       System.debug(opplineitemsch);
+        
+    } //END OF RevenueScheduleCheck() METHOD      
+
+// Method for adding schedule to opportunity line item if Quantity Scheduling is enabled     
+   
+    public static void QuantityScheduleCheck(List<Product2> productlist)
+    {   
+       
+//Add items to List where opportunity line item ID is equal to Product ID
+        List<OpportunityLineItem> opplineitem= [SELECT ID,Product2Id,TotalPrice,Quantity FROM OpportunityLineItem WHERE Product2Id =:productlist];
+        System.debug('Opportunity Line Item :' + opplineitem);
+        
+        List<OpportunityLineItemSchedule> opplineitemsch = new List<OpportunityLineItemSchedule>();
+        List<Product2> productschedulelist = new List<Product2>(); 
+        
+        for(Product2 product : productlist)
+        {
+            for(OpportunityLineItem oppitem : opplineitem)
+            {
+                if((product.Id == oppitem.Product2Id))
+                {
+ //Check If Quantity Scheduling is enabled on the product. 
+                    
+                    if(product.CanUseQuantitySchedule == true)
+                    {                        
+                        string quantityscheduletype = string.valueOf(product.QuantityScheduleType);
+                        system.debug('QuantityScheduleType :' + quantityscheduletype);
+                        
+                        string quantityinstallperiod = string.valueOf(product.QuantityInstallmentPeriod);
+                        system.debug('QuantityInstallmentPeriod : ' + quantityinstallperiod);
+                        
+                        integer noofquantityinstall = product.NumberOfQuantityInstallments;
+                        system.debug('NumberOfQuantityInstallments : ' + noofquantityinstall);
+                        
+                        date scheduleddate = System.today();
+                        
+                        for(integer i=0 ; i<noofquantityinstall ; i++)
+                        {
+                           OpportunityLineItemSchedule sch = new OpportunityLineItemSchedule();
+                            
+ /** If Quantity Schedule Type IS DIVIDE INSTALLMENTS **/ 
+                         
+                          if(quantityscheduletype == 'Divide')
+                           {
+                               if(quantityinstallperiod == 'Daily')
+                               {
+                                   sch.Type = 'Quantity';
+                                   sch.Quantity = oppitem.Quantity / noofquantityinstall;
+                                   sch.ScheduleDate = scheduleddate + i;
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               }
+                               
+                               if(quantityinstallperiod == 'Weekly')
+                               {
+                                   sch.Type = 'Quantity';
+                                   sch.Quantity = oppitem.Quantity / noofquantityinstall;
+                                   sch.ScheduleDate = scheduleddate.addDays(i * 7) ;
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               }
+                               
+                               if(quantityinstallperiod == 'Monthly')
+                               {
+                                   scheduleddate = scheduleddate.addMonths(i * 1);
+                                   sch.Type = 'Quantity';
+                                   sch.Quantity = oppitem.Quantity / noofquantityinstall;
+                                   sch.ScheduleDate = scheduleddate;
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               }
+                               
+                               if(quantityinstallperiod == 'Quaterly')
+                               {
+                                   sch.Type = 'Quantity';
+                                   sch.Quantity = oppitem.Quantity / noofquantityinstall;
+                                   sch.ScheduleDate = scheduleddate.addMonths(i * 4);
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               }
+                               
+                               if(quantityinstallperiod == 'Yearly')
+                               {
+                                   sch.Type = 'Quantity';
+                                   sch.Quantity = oppitem.Quantity / noofquantityinstall;
+                                   sch.ScheduleDate = scheduleddate.addYears(i * 1);
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               }
+                           } // End of IF(RevenueScheduleType = 'DIVIDE')
+                            
+/** If Quantity Schedule Type IS REPEAT INSTALLMENTS **/                              
+                          
+                         else if(quantityscheduletype == 'Repeat')
+                           {
+                               if(quantityinstallperiod == 'Daily')
+                               {
+                                   sch.Type = 'Quantity';
+                                   sch.Quantity = oppitem.Quantity;
+                                   sch.ScheduleDate = scheduleddate + i;
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               }
+                               
+                               if(quantityinstallperiod == 'Weekly')
+                               {
+                                   sch.Type = 'Quantity';
+                                   sch.Quantity = oppitem.Quantity;
+                                   sch.ScheduleDate = scheduleddate.addDays(i * 7 ) ;
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               }
+                               
+                               if(quantityinstallperiod == 'Monthly')
+                               {
+                                   sch.Type = 'Quantity';
+                                   sch.Quantity = oppitem.Quantity;
+                                   sch.ScheduleDate = scheduleddate.addMonths(i * 1);
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               }
+                               
+                               if(quantityinstallperiod == 'Quarterly')
+                               {
+                                   sch.Type = 'Quantity';
+                                   sch.Quantity = oppitem.Quantity;
+                                   sch.ScheduleDate = scheduleddate.addMonths(i * 4);
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               }
+                               
+                               if(quantityinstallperiod == 'Yearly')
+                               {
+                                   sch.Type = 'Quantity';
+                                   sch.Quantity = oppitem.Quantity;
+                                   sch.ScheduleDate = scheduleddate.addYears(i * 1);
+                                   sch.OpportunityLineItemId = oppitem.id;
+                                   opplineitemsch.add(sch);
+                               } 
+                           }  // End of IF(quantityscheduletype = 'REPEAT') 
+                        } // END of FOR
+                    } // END OF IF(SCHEDULE VERIFICATION)
+           		} //END OF IF(product.Id == oppitem.Product2Id)
+            } //END OF FOR (opplineitem)
+        } //END OF FOR (productlist)
+        
+       insert opplineitemsch;
+       System.debug(opplineitemsch);
+        
+    } //END OF QuantityScheduleCheck() METHOD  
+} // END OF CLASS
